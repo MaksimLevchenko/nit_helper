@@ -1,0 +1,88 @@
+name: Auto Increment Version, Tag, and Publish to Pub.dev
+
+on:
+  push:
+    branches:
+      - main  # Или твоя основная ветка
+
+jobs:
+  versioning-and-publishing:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Проверка исходного кода
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Установим Dart
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+
+      # 3. Получим текущую версию
+      - name: Get current version
+        id: version
+        run: |
+          VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: \(.*\)/\1/')
+          echo "Current version: $VERSION"
+          echo "::set-output name=version::$VERSION"
+
+      # 4. Увеличиваем версию
+      - name: Bump version
+        id: bump
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          # Получаем главную и побочную версии
+          IFS='.' read -r -a version_parts <<< "$VERSION"
+          
+          major=${version_parts[0]}
+          minor=${version_parts[1]}
+          patch=${version_parts[2]}
+
+          # Увеличиваем patch версию на 1
+          new_patch=$((patch + 1))
+          
+          # Формируем новую версию
+          NEW_VERSION="$major.$minor.$new_patch"
+          
+          # Обновляем pubspec.yaml
+          sed -i "s/version: $VERSION/version: $NEW_VERSION/" pubspec.yaml
+          echo "New version: $NEW_VERSION"
+          echo "::set-output name=new_version::$NEW_VERSION"
+
+      # 5. Публикуем новый тэг
+      - name: Create new tag
+        run: |
+          NEW_VERSION=${{ steps.bump.outputs.new_version }}
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@github.com"
+          git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
+          git push origin "v$NEW_VERSION"
+
+      # 6. Публикация на pub.dev
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # Для аутентификации через OIDC
+
+    steps:
+      # Шаг для клонирования кода
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Установка Dart
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+
+      # Шаг для аутентификации через OIDC и публикации на pub.dev
+      - name: Publish to pub.dev
+        run: |
+          # Получаем зависимости
+          dart pub get
+          
+          # Публикуем пакет на pub.dev
+          dart pub publish --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Использование токена GitHub для аутентификации
+          PUB_HOSTED_URL: https://pub.dev  # Адрес для публикации на pub.dev
+          PUB_CACHE: ~/.pub-cache  # Кэш для зависимостей Dart

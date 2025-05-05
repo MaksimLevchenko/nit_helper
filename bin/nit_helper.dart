@@ -49,6 +49,26 @@ Future<void> doBuildServer(bool forceMigration, bool useFvm) async {
   );
 }
 
+void _printHelp() {
+  print('''
+nit-helper - Unified build tool for Dart/Flutter/Serverpod projects
+
+Usage:
+  nit-helper build [--fvm]               Build Flutter module
+  nit-helper build-server [--fvm] [--f]  Build Serverpod server and apply migrations
+  nit-helper build-full [--fvm] [--f]    Build both frontend and backend
+
+Options:
+  --fvm   Run commands through "fvm exec"
+  --f     Force migration creation (for server build)
+
+Examples:
+  nit-helper build --fvm
+  nit-helper build-server --f
+  nit-helper build-full --fvm --f
+''');
+}
+
 Future<int> main(List<String> args) async {
   var parser = ArgParser()
     ..addFlag('fvm', negatable: false, help: 'Run commands via `fvm exec`')
@@ -74,9 +94,10 @@ Future<int> main(List<String> args) async {
       await doBuild(useFvm);
       await doBuildServer(force, useFvm);
       break;
+    case '--help':
+    case '-h':
     default:
-      stdout.writeln(parser.usage);
-      exit(64);
+      _printHelp();
   }
   return 0;
 }

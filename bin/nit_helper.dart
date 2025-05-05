@@ -69,7 +69,53 @@ Examples:
 ''');
 }
 
+Future<bool> isCommandAvailable(String command) async {
+  try {
+    final result = await Process.run(
+      Platform.isWindows ? 'where' : 'which',
+      [command],
+      runInShell: true,
+    );
+    return result.exitCode == 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<void> ensureDependencies() async {
+  final missing = <String>[];
+
+  final hasBuildRunner = await isCommandAvailable('dart');
+  final hasFluttergen = await isCommandAvailable('fluttergen');
+
+  if (!hasBuildRunner) {
+    missing.add('build_runner');
+  }
+
+  if (!hasFluttergen) {
+    missing.add('fluttergen');
+  }
+
+  if (missing.isNotEmpty) {
+    print('\n🔧 Required tools not found: ${missing.join(', ')}');
+    print('➡ Attempting to install them globally...');
+
+    for (final tool in missing) {
+      final result = await Process.start(
+        'dart',
+        ['pub', 'global', 'activate', tool],
+        mode: ProcessStartMode.inheritStdio,
+      );
+      await result.exitCode;
+    }
+
+    print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
+  }
+}
+
 Future<int> main(List<String> args) async {
+  await ensureDependencies();
+
   var parser = ArgParser()
     ..addFlag('fvm', negatable: false, help: 'Run commands via `fvm exec`')
     ..addFlag('force',

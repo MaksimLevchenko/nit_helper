@@ -1,6 +1,6 @@
 name: nit_helper
 description: A CLI tool for building Flutter and Serverpod projects with fvm support.
-version: 1.0.0
+version: 1.1.0
 repository: https://github.com/MaksimLevchenko/nit_helper
 environment:
   sdk: '>=2.18.0 <4.0.0'

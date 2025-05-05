@@ -17,6 +17,7 @@ Future<ProcessResult> runCmd(
 }
 
 Future<void> doBuild(bool useFvm) async {
+  await ensureDependenciesForBuild();
   var cmds = [
     ['dart', 'run', 'build_runner', 'build'],
     ['fluttergen']
@@ -82,10 +83,37 @@ Future<bool> isCommandAvailable(String command) async {
   }
 }
 
-Future<void> ensureDependencies() async {
+Future<void> ensureDependenciesForServer() async {
+  await ensureDependenciesForBuild();
   final missing = <String>[];
 
-  final hasBuildRunner = await isCommandAvailable('dart');
+  final hasServerpod = await isCommandAvailable('serverpod');
+
+  if (!hasServerpod) {
+    missing.add('serverpod');
+  }
+
+  if (missing.isNotEmpty) {
+    print('\n🔧 Required tools not found: ${missing.join(', ')}');
+    print('➡ Attempting to install them globally...');
+
+    for (final tool in missing) {
+      final result = await Process.start(
+        'dart',
+        ['pub', 'global', 'activate', tool],
+        mode: ProcessStartMode.inheritStdio,
+      );
+      await result.exitCode;
+    }
+
+    print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
+  }
+}
+
+Future<void> ensureDependenciesForBuild() async {
+  final missing = <String>[];
+
+  final hasBuildRunner = await isCommandAvailable('dart run build_runner');
   final hasFluttergen = await isCommandAvailable('fluttergen');
 
   if (!hasBuildRunner) {
@@ -114,8 +142,6 @@ Future<void> ensureDependencies() async {
 }
 
 Future<int> main(List<String> args) async {
-  await ensureDependencies();
-
   var parser = ArgParser()
     ..addFlag('fvm', negatable: false, help: 'Run commands via `fvm exec`')
     ..addFlag('force',

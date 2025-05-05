@@ -155,4 +155,4 @@ MIT License.
 ## 📫 Обратная связь
 
 Сообщите об ошибках или предложениях:
-[GitHub Issues](https://github.com/yourusername/nit-helper/issues)
+[GitHub Issues](https://github.com/MaksimLevchenko/nit-helper/issues)

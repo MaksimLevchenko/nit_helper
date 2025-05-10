@@ -5,19 +5,24 @@ import 'dart:io';
 import 'package:args/args.dart';
 
 /// Prefix and run a shell command, optionally via `fvm exec`.
-Future<ProcessResult> runCmd(
+Future<Process> runCmd(
   List<String> cmd, {
   required bool useFvm,
-}) {
+}) async {
   if (useFvm) {
     cmd = ['fvm', 'exec', ...cmd];
   }
   stdout.writeln(
       '\x1B[35m${cmd.join(' ')}\x1B[0m'); // magenta :contentReference[oaicite:2]{index=2}
-  return Process.run(cmd.first, cmd.sublist(1),
-      runInShell: true,
-      stdoutEncoding: Encoding.getByName('utf-8'),
-      stderrEncoding: Encoding.getByName('utf-8'));
+  final result = await Process.start(cmd.first, cmd.sublist(1),
+      runInShell: true, includeParentEnvironment: true);
+  result.stdout.transform(utf8.decoder).listen((data) {
+    stdout.write(data);
+  });
+  result.stderr.transform(utf8.decoder).listen((data) {
+    stderr.write(data);
+  });
+  return result;
 }
 
 Future<void> doBuild(bool useFvm) async {

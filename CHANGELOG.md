@@ -1,3 +1,6 @@
+# 1.1.31
+Refactor runCmd to use Process.start for better streaming of stdout and stderr
+
 # 1.1.3
 Enhance runCmd to support UTF-8 encoding for stdout and stderr
 

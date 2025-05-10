@@ -1,5 +1,6 @@
 #!/usr/bin/env dart
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:args/args.dart';
 
@@ -13,7 +14,10 @@ Future<ProcessResult> runCmd(
   }
   stdout.writeln(
       '\x1B[35m${cmd.join(' ')}\x1B[0m'); // magenta :contentReference[oaicite:2]{index=2}
-  return Process.run(cmd.first, cmd.sublist(1), runInShell: true);
+  return Process.run(cmd.first, cmd.sublist(1),
+      runInShell: true,
+      stdoutEncoding: Encoding.getByName('utf-8'),
+      stderrEncoding: Encoding.getByName('utf-8'));
 }
 
 Future<void> doBuild(bool useFvm) async {

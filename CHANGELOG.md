@@ -1,3 +1,6 @@
+# 1.1.3
+Enhance runCmd to support UTF-8 encoding for stdout and stderr
+
 # 1.1.2
 - Updated README.md
 

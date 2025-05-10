@@ -1,3 +1,6 @@
+# 1.2.0
+Refactor runCmd to include current directory in output and streamline directory navigation for build commands
+
 # 1.1.31
 Refactor runCmd to use Process.start for better streaming of stdout and stderr
 

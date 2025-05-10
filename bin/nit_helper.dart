@@ -13,33 +13,59 @@ Future<Process> runCmd(
     cmd = ['fvm', 'exec', ...cmd];
   }
   stdout.writeln(
-      '\x1B[35m${cmd.join(' ')}\x1B[0m'); // magenta :contentReference[oaicite:2]{index=2}
-  final result = await Process.start(cmd.first, cmd.sublist(1),
-      runInShell: true, includeParentEnvironment: true);
+      '\x1B[35m${cmd.join(' ')} at dir: ${Directory.current.path}\x1B[0m'); // magenta :contentReference[oaicite:2]{index=2}
+  final result = await Process.start(
+    cmd.first,
+    cmd.sublist(1),
+    runInShell: true,
+    includeParentEnvironment: true,
+  );
   result.stdout.transform(utf8.decoder).listen((data) {
     stdout.write(data);
   });
   result.stderr.transform(utf8.decoder).listen((data) {
     stderr.write(data);
   });
+  await result.exitCode;
   return result;
 }
 
+Future<void> goToDir(String endsWith) async {
+  var currentDir = Directory.current.path;
+  final hasPubspec = File('pubspec.yaml').existsSync();
+  if (hasPubspec) {
+    // If pubspec.yaml exists, we are already in the right directory
+    return;
+  }
+  if (!currentDir.contains(endsWith)) {
+    var dirs = Directory.current.listSync().whereType<Directory>();
+    var flutterDir = dirs.firstWhere(
+      (dir) => dir.path.endsWith(endsWith),
+      orElse: () =>
+          throw Exception('No directory with "$endsWith" in name found'),
+    );
+    Directory.current = flutterDir;
+  }
+}
+
 Future<void> doBuild(bool useFvm) async {
-  await ensureDependenciesForBuild();
+  // await ensureDependenciesForBuild();
+  final startDir = Directory.current.path;
+  goToDir('_flutter');
   var cmds = [
     ['dart', 'run', 'build_runner', 'build'],
     ['fluttergen']
   ];
   for (var c in cmds) {
-    var result = await runCmd(c, useFvm: useFvm);
-    stdout.write(result.stdout);
-    stderr.write(result.stderr);
+    await runCmd(c, useFvm: useFvm);
   }
+  Directory.current = startDir;
 }
 
 Future<void> doBuildServer(bool forceMigration, bool useFvm) async {
   // generate, create-migration, apply
+  final startDir = Directory.current.path;
+  goToDir('_server');
   await runCmd(['serverpod', 'generate'], useFvm: useFvm);
   if (forceMigration) {
     await runCmd(['serverpod', 'create-migration', '-f'], useFvm: useFvm);
@@ -57,6 +83,7 @@ Future<void> doBuildServer(bool forceMigration, bool useFvm) async {
     ],
     useFvm: useFvm,
   );
+  Directory.current = startDir;
 }
 
 void _printHelp() {
@@ -79,76 +106,76 @@ Examples:
 ''');
 }
 
-Future<bool> isCommandAvailable(String command) async {
-  try {
-    final result = await Process.run(
-      Platform.isWindows ? 'where' : 'which',
-      [command],
-      runInShell: true,
-    );
-    return result.exitCode == 0;
-  } catch (_) {
-    return false;
-  }
-}
+// Future<bool> isCommandAvailable(String command) async {
+//   try {
+//     final result = await Process.run(
+//       Platform.isWindows ? 'where' : 'which',
+//       [command],
+//       runInShell: true,
+//     );
+//     return result.exitCode == 0;
+//   } catch (_) {
+//     return false;
+//   }
+// }
 
-Future<void> ensureDependenciesForServer() async {
-  await ensureDependenciesForBuild();
-  final missing = <String>[];
+// Future<void> ensureDependenciesForServer() async {
+//   await ensureDependenciesForBuild();
+//   final missing = <String>[];
 
-  final hasServerpod = await isCommandAvailable('serverpod');
+//   final hasServerpod = await isCommandAvailable('serverpod');
 
-  if (!hasServerpod) {
-    missing.add('serverpod');
-  }
+//   if (!hasServerpod) {
+//     missing.add('serverpod');
+//   }
 
-  if (missing.isNotEmpty) {
-    print('\n🔧 Required tools not found: ${missing.join(', ')}');
-    print('➡ Attempting to install them globally...');
+//   if (missing.isNotEmpty) {
+//     print('\n🔧 Required tools not found: ${missing.join(', ')}');
+//     print('➡ Attempting to install them globally...');
 
-    for (final tool in missing) {
-      final result = await Process.start(
-        'dart',
-        ['pub', 'global', 'activate', tool],
-        mode: ProcessStartMode.inheritStdio,
-      );
-      await result.exitCode;
-    }
+//     for (final tool in missing) {
+//       final result = await Process.start(
+//         'dart',
+//         ['pub', 'global', 'activate', tool],
+//         mode: ProcessStartMode.inheritStdio,
+//       );
+//       await result.exitCode;
+//     }
 
-    print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
-  }
-}
+//     print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
+//   }
+// }
 
-Future<void> ensureDependenciesForBuild() async {
-  final missing = <String>[];
+// Future<void> ensureDependenciesForBuild() async {
+//   final missing = <String>[];
 
-  final hasBuildRunner = await isCommandAvailable('dart run build_runner');
-  final hasFluttergen = await isCommandAvailable('fluttergen');
+//   final hasBuildRunner = await isCommandAvailable('dart run build_runner');
+//   final hasFluttergen = await isCommandAvailable('fluttergen');
 
-  if (!hasBuildRunner) {
-    missing.add('build_runner');
-  }
+//   if (!hasBuildRunner) {
+//     missing.add('build_runner');
+//   }
 
-  if (!hasFluttergen) {
-    missing.add('fluttergen');
-  }
+//   if (!hasFluttergen) {
+//     missing.add('flutter_gen');
+//   }
 
-  if (missing.isNotEmpty) {
-    print('\n🔧 Required tools not found: ${missing.join(', ')}');
-    print('➡ Attempting to install them globally...');
+//   if (missing.isNotEmpty) {
+//     print('\n🔧 Required tools not found: ${missing.join(', ')}');
+//     print('➡ Attempting to install them globally...');
 
-    for (final tool in missing) {
-      final result = await Process.start(
-        'dart',
-        ['pub', 'global', 'activate', tool],
-        mode: ProcessStartMode.inheritStdio,
-      );
-      await result.exitCode;
-    }
+//     for (final tool in missing) {
+//       final result = await Process.start(
+//         'dart',
+//         ['pub', 'global', 'activate', tool],
+//         mode: ProcessStartMode.inheritStdio,
+//       );
+//       await result.exitCode;
+//     }
 
-    print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
-  }
-}
+//     print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
+//   }
+// }
 
 Future<int> main(List<String> args) async {
   var parser = ArgParser()

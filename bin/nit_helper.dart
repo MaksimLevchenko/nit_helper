@@ -1,90 +1,8 @@
 #!/usr/bin/env dart
 
-import 'dart:convert';
-import 'dart:io';
 import 'package:args/args.dart';
-
-/// Prefix and run a shell command, optionally via `fvm exec`.
-Future<Process> runCmd(
-  List<String> cmd, {
-  required bool useFvm,
-}) async {
-  if (useFvm) {
-    cmd = ['fvm', 'exec', ...cmd];
-  }
-  stdout.writeln(
-      '\x1B[35m${cmd.join(' ')} at dir: ${Directory.current.path}\x1B[0m'); // magenta :contentReference[oaicite:2]{index=2}
-  final result = await Process.start(
-    cmd.first,
-    cmd.sublist(1),
-    runInShell: true,
-    includeParentEnvironment: true,
-  );
-  result.stdout.transform(utf8.decoder).listen((data) {
-    stdout.write(data);
-  });
-  result.stderr.transform(utf8.decoder).listen((data) {
-    stderr.write(data);
-  });
-  await result.exitCode;
-  return result;
-}
-
-Future<void> goToDir(String endsWith) async {
-  var currentDir = Directory.current.path;
-  final hasPubspec = File('pubspec.yaml').existsSync();
-  if (hasPubspec) {
-    // If pubspec.yaml exists, we are already in the right directory
-    return;
-  }
-  if (!currentDir.contains(endsWith)) {
-    var dirs = Directory.current.listSync().whereType<Directory>();
-    var flutterDir = dirs.firstWhere(
-      (dir) => dir.path.endsWith(endsWith),
-      orElse: () =>
-          throw Exception('No directory with "$endsWith" in name found'),
-    );
-    Directory.current = flutterDir;
-  }
-}
-
-Future<void> doBuild(bool useFvm) async {
-  // await ensureDependenciesForBuild();
-  final startDir = Directory.current.path;
-  goToDir('_flutter');
-  var cmds = [
-    ['dart', 'run', 'build_runner', 'build'],
-    ['fluttergen']
-  ];
-  for (var c in cmds) {
-    await runCmd(c, useFvm: useFvm);
-  }
-  Directory.current = startDir;
-}
-
-Future<void> doBuildServer(bool forceMigration, bool useFvm) async {
-  // generate, create-migration, apply
-  final startDir = Directory.current.path;
-  goToDir('_server');
-  await runCmd(['serverpod', 'generate'], useFvm: useFvm);
-  if (forceMigration) {
-    await runCmd(['serverpod', 'create-migration', '-f'], useFvm: useFvm);
-  } else {
-    await runCmd(['serverpod', 'create-migration'], useFvm: useFvm);
-  }
-  await runCmd(
-    [
-      'dart',
-      'run',
-      'bin/main.dart',
-      '--role',
-      'maintenance',
-      '--apply-migrations'
-    ],
-    useFvm: useFvm,
-  );
-  Directory.current = startDir;
-}
+import 'build_helper.dart';
+import 'check_nit_rules.dart';
 
 void _printHelp() {
   print('''
@@ -94,118 +12,113 @@ Usage:
   nit-helper build [--fvm]               Build Flutter module
   nit-helper build-server [--fvm] [--f]  Build Serverpod server and apply migrations
   nit-helper build-full [--fvm] [--f]    Build both frontend and backend
+  nit-helper check [--type <name>] [--level <level>] [--dir <path>]
+                                        Run static analysis checks
 
 Options:
-  --fvm   Run commands through "fvm exec"
+  --fvm   Run commands through "fvm exec" (only for build*, not check)
   --f     Force migration creation (for server build)
 
 Examples:
   nit-helper build --fvm
   nit-helper build-server --f
   nit-helper build-full --fvm --f
+  nit-helper check --type uiKitContainsText --level warning --dir lib/app_home
 ''');
 }
 
-// Future<bool> isCommandAvailable(String command) async {
-//   try {
-//     final result = await Process.run(
-//       Platform.isWindows ? 'where' : 'which',
-//       [command],
-//       runInShell: true,
-//     );
-//     return result.exitCode == 0;
-//   } catch (_) {
-//     return false;
-//   }
-// }
-
-// Future<void> ensureDependenciesForServer() async {
-//   await ensureDependenciesForBuild();
-//   final missing = <String>[];
-
-//   final hasServerpod = await isCommandAvailable('serverpod');
-
-//   if (!hasServerpod) {
-//     missing.add('serverpod');
-//   }
-
-//   if (missing.isNotEmpty) {
-//     print('\n🔧 Required tools not found: ${missing.join(', ')}');
-//     print('➡ Attempting to install them globally...');
-
-//     for (final tool in missing) {
-//       final result = await Process.start(
-//         'dart',
-//         ['pub', 'global', 'activate', tool],
-//         mode: ProcessStartMode.inheritStdio,
-//       );
-//       await result.exitCode;
-//     }
-
-//     print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
-//   }
-// }
-
-// Future<void> ensureDependenciesForBuild() async {
-//   final missing = <String>[];
-
-//   final hasBuildRunner = await isCommandAvailable('dart run build_runner');
-//   final hasFluttergen = await isCommandAvailable('fluttergen');
-
-//   if (!hasBuildRunner) {
-//     missing.add('build_runner');
-//   }
-
-//   if (!hasFluttergen) {
-//     missing.add('flutter_gen');
-//   }
-
-//   if (missing.isNotEmpty) {
-//     print('\n🔧 Required tools not found: ${missing.join(', ')}');
-//     print('➡ Attempting to install them globally...');
-
-//     for (final tool in missing) {
-//       final result = await Process.start(
-//         'dart',
-//         ['pub', 'global', 'activate', tool],
-//         mode: ProcessStartMode.inheritStdio,
-//       );
-//       await result.exitCode;
-//     }
-
-//     print('\n✅ Dependencies installed. Restart your terminal if needed.\n');
-//   }
-// }
-
 Future<int> main(List<String> args) async {
-  var parser = ArgParser()
-    ..addFlag('fvm', negatable: false, help: 'Run commands via `fvm exec`')
-    ..addFlag('force',
-        abbr: 'f', negatable: false, help: 'Force create migration')
-    ..addCommand('build')
-    ..addCommand('build-server')
-    ..addCommand('build-full');
+  final parser = ArgParser()
+    ..addCommand('build', ArgParser()..addFlag('fvm', negatable: false))
+    ..addCommand(
+      'build-server',
+      ArgParser()
+        ..addFlag('fvm', negatable: false)
+        ..addFlag('force', abbr: 'f', negatable: false),
+    )
+    ..addCommand(
+      'build-full',
+      ArgParser()
+        ..addFlag('fvm', negatable: false)
+        ..addFlag('force', abbr: 'f', negatable: false),
+    )
+    ..addCommand(
+      'check',
+      ArgParser()
+        ..addOption('type',
+            help: 'Фильтр по типу проверки (например: uiKitPartMissing)')
+        ..addOption('level',
+            help: 'Фильтр по уровню серьёзности (info, warning, error)')
+        ..addOption('dir', help: 'Папка, в которой запускать проверку'),
+    );
 
-  var result = parser.parse(args);
-  var useFvm = result['fvm'] as bool;
-  var force = result['force'] as bool;
-  var cmd = result.command?.name;
+  late ArgResults result;
+  String? cmd;
+  bool useFvm = false;
+  bool force = false;
+
+  try {
+    result = parser.parse(args);
+    cmd = result.command?.name;
+  } catch (e) {
+    print('Ошибка при разборе аргументов: $e');
+    return 1;
+  }
+
+  final cmdArgs = result.command;
+
+  // only check fvm for build* commands
+  if (cmdArgs != null && cmd != 'check' && cmdArgs.wasParsed('fvm')) {
+    useFvm = cmdArgs['fvm'] as bool;
+  }
+
+  // only check force for server-related commands
+  if (cmdArgs != null && ['build-server', 'build-full'].contains(cmd)) {
+    if (cmdArgs.wasParsed('force')) {
+      force = cmdArgs['force'] as bool;
+    }
+  }
 
   switch (cmd) {
     case 'build':
-      await doBuild(useFvm);
+      await BuildHelper.doBuild(useFvm);
       break;
     case 'build-server':
-      await doBuildServer(force, useFvm);
+      await BuildHelper.doBuildServer(force, useFvm);
       break;
     case 'build-full':
-      await doBuild(useFvm);
-      await doBuildServer(force, useFvm);
+      await BuildHelper.doBuild(useFvm);
+      await BuildHelper.doBuildServer(force, useFvm);
+      break;
+    case 'check':
+      print('Running static analysis checks...');
+      final argsForCheck = <String>[];
+
+      if (cmdArgs!.wasParsed('type')) {
+        argsForCheck.add('--type');
+        argsForCheck.add(cmdArgs['type']);
+      }
+      if (cmdArgs.wasParsed('level')) {
+        argsForCheck.add('--level');
+        argsForCheck.add(cmdArgs['level']);
+      }
+      if (cmdArgs.wasParsed('dir')) {
+        argsForCheck.add('--dir');
+        argsForCheck.add(cmdArgs['dir']);
+      }
+
+      await runCheckNitRules(argsForCheck);
       break;
     case '--help':
     case '-h':
+    case '':
+    case null:
+      _printHelp();
+      break;
     default:
+      print('Неизвестная команда: $cmd');
       _printHelp();
   }
+
   return 0;
 }

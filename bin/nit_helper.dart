@@ -1,8 +1,13 @@
 #!/usr/bin/env dart
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+
 import 'package:args/args.dart';
 import 'build_helper.dart';
 import 'check_nit_rules.dart';
+import 'version.dart';
 
 void _printHelp() {
   print('''
@@ -27,7 +32,65 @@ Examples:
 ''');
 }
 
+void _checkUpdate() async {
+  final currentVersion = _getCurrentVersion();
+  // final currentVersion = Version(major: 1, minor: 0, patch: 0);
+  final latestVersion = await _getLatestVersion();
+  // final latestVersion = null;
+
+  if (latestVersion == null) {
+    print(
+        '\x1B[31mFailed to check for updates. Please check your internet connection.\x1B[0m');
+    return;
+  }
+
+  if (currentVersion < latestVersion) {
+    print(
+        '\x1B[33mA new version of nit-helper is available: $latestVersion (current: $currentVersion)\x1B[0m');
+    print('Please update using "dart pub global activate nit_helper"');
+  } else {
+    print('\x1B[32mYou are using the latest version: $currentVersion\x1B[0m');
+  }
+}
+
+Version _getCurrentVersion() {
+// Reads the version from pubspec.yaml without using external packages.
+  final pubspec = File('pubspec.yaml');
+  if (!pubspec.existsSync()) {
+    throw Exception('pubspec.yaml not found in the current directory.');
+  }
+
+  final content = pubspec.readAsStringSync();
+  final versionLine = content.split('\n').firstWhere(
+        (line) => line.startsWith('version:'),
+        orElse: () => 'version: 0.0.0',
+      );
+
+  final versionStr = versionLine.split(':').last.trim();
+  return Version.parse(versionStr) ?? Version(major: 0, minor: 0, patch: 0);
+}
+
+Future<Version?> _getLatestVersion() async {
+  const packageName = 'nit_helper';
+  final url = Uri.parse('https://pub.dev/api/packages/$packageName');
+
+  try {
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final latest = json['latest']['version'] as String?;
+      if (latest != null) {
+        return Version.parse(latest);
+      }
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<int> main(List<String> args) async {
+  _checkUpdate();
   final parser = ArgParser()
     ..addCommand('build', ArgParser()..addFlag('fvm', negatable: false))
     ..addCommand(

@@ -1,7 +1,6 @@
 // ignore_for_file: avoid_print
 
 import 'dart:io';
-import 'run_cmd.dart';
 
 Future<void> runCheckNitRules(List<String> args) async {
   _checkNitRules(args);

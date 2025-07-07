@@ -1,5 +1,8 @@
+# 1.3.1
+Add version checking and update functionality to nit-helper
+
 # 1.3.0
-Update version to 1.3.1, add static analysis check command, and refactor build commands
+Update version to 1.3.0, add static analysis check command, and refactor build commands
 
 # 1.2.0
 Refactor runCmd to include current directory in output and streamline directory navigation for build commands

@@ -2,7 +2,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'dart:io';
+import 'generated/version.g.dart'; // Ensure this file exists
 
 import 'package:args/args.dart';
 import 'build_helper.dart';
@@ -33,7 +33,7 @@ Examples:
 }
 
 void _checkUpdate() async {
-  final currentVersion = _getCurrentVersion();
+  final currentVersion = await _getCurrentVersion();
   // final currentVersion = Version(major: 1, minor: 0, patch: 0);
   final latestVersion = await _getLatestVersion();
   // final latestVersion = null;
@@ -53,21 +53,12 @@ void _checkUpdate() async {
   }
 }
 
-Version _getCurrentVersion() {
-// Reads the version from pubspec.yaml without using external packages.
-  final pubspec = File('pubspec.yaml');
-  if (!pubspec.existsSync()) {
-    throw Exception('pubspec.yaml not found in the current directory.');
+Future<Version> _getCurrentVersion() async {
+  try {
+    return Version.parse(appVersion) ?? Version(major: 0, minor: 0, patch: 0);
+  } catch (_) {
+    return Version(major: 0, minor: 0, patch: 0);
   }
-
-  final content = pubspec.readAsStringSync();
-  final versionLine = content.split('\n').firstWhere(
-        (line) => line.startsWith('version:'),
-        orElse: () => 'version: 0.0.0',
-      );
-
-  final versionStr = versionLine.split(':').last.trim();
-  return Version.parse(versionStr) ?? Version(major: 0, minor: 0, patch: 0);
 }
 
 Future<Version?> _getLatestVersion() async {

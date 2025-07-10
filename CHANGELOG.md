@@ -1,3 +1,6 @@
+# 1.3.5
+Fix bug in nit-helper where it was not correctly checking for the current version
+
 # 1.3.1
 Add version checking and update functionality to nit-helper
 

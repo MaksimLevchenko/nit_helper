@@ -3,11 +3,8 @@ class Version implements Comparable<Version> {
   final int minor;
   final int patch;
 
-  Version({
-    required this.major,
-    required this.minor,
-    required this.patch,
-  });
+  const Version(
+      {required this.major, required this.minor, required this.patch});
 
   @override
   String toString() => '$major.$minor.$patch';
@@ -36,13 +33,15 @@ class Version implements Comparable<Version> {
 
   @override
   bool operator ==(Object other) =>
+      identical(this, other) ||
       other is Version &&
-      major == other.major &&
-      minor == other.minor &&
-      patch == other.patch;
+          runtimeType == other.runtimeType &&
+          major == other.major &&
+          minor == other.minor &&
+          patch == other.patch;
 
   @override
-  int get hashCode => Object.hash(major, minor, patch);
+  int get hashCode => major.hashCode ^ minor.hashCode ^ patch.hashCode;
 
   bool operator <(Version other) => compareTo(other) < 0;
   bool operator >(Version other) => compareTo(other) > 0;

@@ -37,12 +37,6 @@ class BuildCommand {
   Future<int> executeBuildServer(
       {required bool forceMigration, required bool useFvm}) async {
     return await _executeInServerDirectory(() async {
-      // Проверяем наличие serverpod.yaml
-      if (!_fileService.fileExists('serverpod.yaml')) {
-        throw Exception(
-            'serverpod.yaml not found. Are you in a Serverpod project?');
-      }
-
       final generateResult = await _processService
           .runCommand(['serverpod', 'generate'], useFvm: useFvm);
       if (generateResult != 0) {

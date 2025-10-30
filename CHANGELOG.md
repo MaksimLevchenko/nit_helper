@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.3]
+
+### 📚 Updated
+- **Documentation**: Update launch arguments and enhance command display in ProcessService
+
 ## [1.5.2] 
 
 ### 🐛 Fixed

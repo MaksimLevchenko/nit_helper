@@ -14,7 +14,7 @@
 			"name": "nit_helper",
 			"request": "launch",
 			"type": "dart",
-			"args": ["get-all"],
+			"args": ["build-full"],
 		}
 	]
 }

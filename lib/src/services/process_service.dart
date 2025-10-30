@@ -11,8 +11,21 @@ class ProcessService {
 
     final directory = Directory.current.path.split('/').last;
 
+    final commandDisplay = () {
+      var displayCmd = cmd;
+      // Remove 'dart run' prefix if present
+      if (displayCmd.length >= 5 &&
+          displayCmd[0] == 'dart' &&
+          displayCmd[1] == 'pub' &&
+          displayCmd[2] == 'global' &&
+          displayCmd[3] == 'run') {
+        displayCmd = displayCmd.sublist(4);
+      }
+      return displayCmd.join(' ');
+    }();
+
     // Фиолетовая строка перед командой
-    print('\x1B[35mRunning ${cmd.join(' ')} in $directory\x1B[0m');
+    print('\x1B[35mRunning $commandDisplay in $directory\x1B[0m');
 
     try {
       // Используем inheritStdio для прямого наследования TTY

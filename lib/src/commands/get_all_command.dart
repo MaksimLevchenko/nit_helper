@@ -236,6 +236,7 @@ class GetAllCommand {
       '.github',
       '.vscode',
       '.idea',
+      '.fvm',
       'node_modules',
       // Кэш и временные файлы
       '.pub-cache', '.gradle', '.m2', 'DerivedData', 'Pods',

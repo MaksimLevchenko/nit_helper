@@ -20,9 +20,7 @@ mixin _$Car {
   String get model => throw _privateConstructorUsedError;
   int get year => throw _privateConstructorUsedError;
 
-  /// Create a copy of Car
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $CarCopyWith<Car> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -43,8 +41,6 @@ class _$CarCopyWithImpl<$Res, $Val extends Car> implements $CarCopyWith<$Res> {
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Car
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -84,8 +80,6 @@ class __$$CarImplCopyWithImpl<$Res> extends _$CarCopyWithImpl<$Res, _$CarImpl>
   __$$CarImplCopyWithImpl(_$CarImpl _value, $Res Function(_$CarImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Car
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -141,9 +135,7 @@ class _$CarImpl implements _Car {
   @override
   int get hashCode => Object.hash(runtimeType, make, model, year);
 
-  /// Create a copy of Car
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$CarImplCopyWith<_$CarImpl> get copyWith =>
@@ -162,11 +154,8 @@ abstract class _Car implements Car {
   String get model;
   @override
   int get year;
-
-  /// Create a copy of Car
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$CarImplCopyWith<_$CarImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

@@ -1,7 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
-
-import '../services/file_service.dart';
 
 class UnusedFileResult {
   final List<String> unusedFiles;
@@ -214,7 +211,7 @@ class UnusedFileScanner {
     try {
       final currentDir = Directory(currentFile).parent;
       final targetFile =
-          File.fromUri(currentDir.uri.resolve(importPath + '.dart'));
+          File.fromUri(currentDir.uri.resolve('$importPath.dart'));
 
       if (targetFile.existsSync()) {
         return targetFile.path;
@@ -305,10 +302,9 @@ class UnusedFileScanner {
 }
 
 class CheckCommand {
-  final FileService _fileService;
   final UnusedFileScanner _scanner = UnusedFileScanner();
 
-  CheckCommand(this._fileService);
+  CheckCommand();
 
   // Оригинальный метод для обратной совместимости
   Future<int> execute() async {
@@ -345,7 +341,7 @@ class CheckCommand {
       return result;
     } catch (e) {
       print('❌ Error during analysis: $e');
-      throw e;
+      rethrow;
     }
   }
 

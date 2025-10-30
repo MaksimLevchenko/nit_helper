@@ -1,4 +1,5 @@
 import 'package:args/args.dart';
+import 'package:nit_helper/src/commands/get_all_command.dart';
 import '../commands/build_command.dart';
 import '../commands/check_command.dart';
 import '../services/update_service.dart';
@@ -11,6 +12,7 @@ import 'error_handler.dart';
 class CommandRunner {
   final BuildCommand _buildCommand;
   final CheckCommand _checkCommand;
+  final GetAllCommand _getAllCommand;
   final UpdateService _updateService;
   final HelpPrinter _helpPrinter;
   final ErrorHandler _errorHandler;
@@ -19,11 +21,13 @@ class CommandRunner {
     required BuildCommand buildCommand,
     required CheckCommand checkCommand,
     required UpdateService updateService,
+    required GetAllCommand getAllCommand,
     required HelpPrinter helpPrinter,
     required ErrorHandler errorHandler,
   })  : _buildCommand = buildCommand,
         _checkCommand = checkCommand,
         _updateService = updateService,
+        _getAllCommand = getAllCommand,
         _helpPrinter = helpPrinter,
         _errorHandler = errorHandler;
 
@@ -43,6 +47,7 @@ class CommandRunner {
       ..addCommand('build', _buildBuildParser())
       ..addCommand('build-server', _buildBuildParser())
       ..addCommand('build-full', _buildBuildParser())
+      ..addCommand('get-all', _buildGetAllParser())
       ..addCommand('check', _buildCheckParser());
   }
 
@@ -84,6 +89,21 @@ class CommandRunner {
       );
   }
 
+  ArgParser _buildGetAllParser() {
+    return ArgParser()
+      ..addOption(
+        'path',
+        abbr: 'p',
+        help: 'The path to start searching for Dart/Flutter projects',
+        defaultsTo: '.',
+      )
+      ..addFlag(
+        'fvm',
+        help: 'Run commands through FVM',
+        defaultsTo: false,
+      );
+  }
+
   ParsedCommand _parseCommand(ArgParser parser, List<String> args) {
     try {
       final result = parser.parse(args);
@@ -94,7 +114,9 @@ class CommandRunner {
       bool force = false;
 
       // Параметры для команд build
-      if (commandArgs != null && commandName != 'check') {
+      if (commandArgs != null &&
+          commandName != 'check' &&
+          commandName != 'get-all') {
         useFvm = commandArgs['fvm'] as bool? ?? false;
         if (['build-server', 'build-full', 'build'].contains(commandName)) {
           force = commandArgs['force'] as bool? ?? false;
@@ -117,6 +139,14 @@ class CommandRunner {
         interactive = commandArgs['interactive'] as bool? ?? false;
       }
 
+      // Параметры для команды get-all
+      String? getAllPath;
+      bool getAllUseFvm = false;
+      if (commandName == 'get-all' && commandArgs != null) {
+        getAllPath = commandArgs['path'] as String?;
+        getAllUseFvm = commandArgs['fvm'] as bool? ?? false;
+      }
+
       return ParsedCommand(
         name: commandName,
         useFvm: useFvm,
@@ -126,6 +156,8 @@ class CommandRunner {
         excludeFolders: excludeFolders,
         showDetails: showDetails,
         interactive: interactive,
+        getAllPath: getAllPath,
+        getAllUseFvm: getAllUseFvm,
       );
     } catch (e) {
       throw ArgumentError('Failed to parse arguments: $e');
@@ -161,6 +193,11 @@ class CommandRunner {
           await _checkCommand.interactiveCleanup(result);
         }
         break;
+      case 'get-all':
+        return await _getAllCommand.execute(
+          path: command.getAllPath,
+          useFvm: command.getAllUseFvm,
+        );
       case null:
       case '--help':
       case '-h':
@@ -186,6 +223,10 @@ class ParsedCommand {
   final bool showDetails;
   final bool interactive;
 
+  // Параметры для команды get-all
+  final String? getAllPath;
+  final bool getAllUseFvm;
+
   ParsedCommand({
     required this.name,
     required this.useFvm,
@@ -195,6 +236,8 @@ class ParsedCommand {
     this.excludeFolders = const [],
     this.showDetails = true,
     this.interactive = false,
+    this.getAllPath,
+    this.getAllUseFvm = false,
   });
 }
 
@@ -202,7 +245,8 @@ CommandRunner createCommandRunner() {
   final processService = ProcessService();
   final fileService = FileService();
   final buildCommand = BuildCommand(processService, fileService);
-  final checkCommand = CheckCommand(fileService);
+  final checkCommand = CheckCommand();
+  final getAllCommand = GetAllCommand(processService);
   final httpClient = HttpClient();
   final updateService = UpdateService(httpClient);
   final helpPrinter = HelpPrinter();
@@ -212,6 +256,7 @@ CommandRunner createCommandRunner() {
     buildCommand: buildCommand,
     checkCommand: checkCommand,
     updateService: updateService,
+    getAllCommand: getAllCommand,
     helpPrinter: helpPrinter,
     errorHandler: errorHandler,
   );

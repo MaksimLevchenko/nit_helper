@@ -1,3 +1,2 @@
-  // Generated file. Do not edit.
-  const appVersion = '1.3.6';
-  
+// Generated file. Do not edit.
+const appVersion = '1.4.0';

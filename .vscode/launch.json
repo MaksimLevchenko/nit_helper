@@ -13,7 +13,8 @@
 		{
 			"name": "nit_helper",
 			"request": "launch",
-			"type": "dart"
+			"type": "dart",
+			"args": ["get-all"],
 		}
 	]
 }

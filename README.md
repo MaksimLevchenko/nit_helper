@@ -1,8 +1,8 @@
 # nit-helper
 
-**nit-helper** is a cross-platform Dart CLI tool designed to automate building Flutter and Serverpod projects.
+**nit-helper** is a cross-platform Dart CLI tool designed to automate building Flutter and Serverpod projects, with support for monorepo structures.
 
-The tool automatically detects the necessary directories (`*_flutter`, `*_server`) and executes the appropriate commands, with optional `fvm` support.
+The tool automatically detects the necessary directories (`*_flutter`, `*_server`) and executes the appropriate commands, with optional `fvm` support. Additionally, it can manage dependencies across multiple subprojects in large project hierarchies.
 
 ---
 
@@ -14,6 +14,7 @@ The tool automatically detects the necessary directories (`*_flutter`, `*_server
 - 🧠 Smart project structure navigation  
 - 🔧 Commands unified in a single CLI: `nit-helper`  
 - 🗑️ Unused files detection and cleanup
+- 📚 Get-All command for monorepo dependency management with tree-structured output
 
 ---
 
@@ -131,17 +132,64 @@ Features:
 
 ---
 
+### 📚 `get-all`
+
+Recursively finds all subprojects with `pubspec.yaml` and runs `dart pub get` in each. Automatically excludes standard Flutter folders to avoid unnecessary scanning.
+
+```bash
+nit-helper get-all
+```
+
+With custom path:
+```bash
+nit-helper get-all --path ./my_monorepo
+```
+
+With `fvm`:
+```bash
+nit-helper get-all --path ./packages --fvm
+```
+
+Features:
+* **Recursive Project Discovery**: Automatically finds all Dart/Flutter projects at any depth
+* **Beautiful Tree Output**: Results displayed in a structured tree format with status indicators
+* **Smart Folder Exclusion**: Ignores build directories (build, ios, android, web, windows, macos, linux) and system folders (.git, .vscode, etc.)
+* **Symlink Loop Detection**: Prevents infinite loops from circular symlinks
+* **Cross-Platform Support**: Works on Windows, macOS, and Linux
+* **Interactive Output**: Preserves colored terminal output during dependency installation
+* **Perfect for Monorepos**: Handles complex project structures with nested dependencies
+
+Example output:
+```
+📁 Found 4 projects:
+
+📊 GET ALL SUMMARY
+═════════════════════════════════════════════════
+📦 packages/
+├── ✅ shared_models
+├── ✅ ui_components
+└── 📦 utils/
+    └── ✅ string_utils
+✅ my_app
+
+Total projects: 4
+Successful: 4
+All projects processed successfully! 🎉
+```
+
+---
+
 ## 🧰 Arguments
 
 | Argument | Command | Description |
 | -------- | ------- | ----------- |
-| `--fvm` | all commands | Execute through `fvm exec` |
-| `--force` | `build-server`, `build-full` | Force create migrations |
-| `--path`, `-p` | `check` | Path to project directory |
-| `--exclude-pattern`, `-e` | `check` | File patterns to exclude |
-| `--exclude-folder`, `-f` | `check` | Folders to exclude |
-| `--interactive`, `-i` | `check` | Enable interactive cleanup |
-| `--details`, `-d` | `check` | Show detailed file list |
+| `--fvm` | build, build-server, build-full, get-all | Execute through `fvm exec` |
+| `--force` | build-server, build-full | Force create migrations |
+| `--path`, `-p` | check, get-all | Path to project directory |
+| `--exclude-pattern`, `-e` | check | File patterns to exclude |
+| `--exclude-folder`, `-f` | check | Folders to exclude |
+| `--interactive`, `-i` | check | Enable interactive cleanup |
+| `--details`, `-d` | check | Show detailed file list |
 
 ---
 
@@ -162,6 +210,15 @@ nit-helper check
 
 # Interactive cleanup with exclusions  
 nit-helper check --exclude-pattern "*.g.dart" --interactive
+
+# Get dependencies for all subprojects in current directory
+nit-helper get-all
+
+# Get dependencies for specific monorepo path
+nit-helper get-all --path ./packages
+
+# Get dependencies with FVM
+nit-helper get-all -p ./my_monorepo --fvm
 ```
 
 ---
@@ -171,12 +228,19 @@ nit-helper check --exclude-pattern "*.g.dart" --interactive
 ```text
 project_root/
 ├── my_app_flutter/
+│   ├── pubspec.yaml
 │   └── main.dart
 ├── my_app_server/
+│   ├── pubspec.yaml
 │   └── bin/main.dart
+├── packages/
+│   ├── shared_models/
+│   │   └── pubspec.yaml
+│   └── ui_components/
+│       └── pubspec.yaml
 ```
 
-`nit-helper` will automatically detect where `*_flutter` and `*_server` are located and execute the appropriate commands.
+`nit-helper` will automatically detect where `*_flutter` and `*_server` are located and execute the appropriate commands. The `get-all` command is particularly useful in monorepo structures like the one above, scanning through all nested `pubspec.yaml` files and installing dependencies for each.
 
 ---
 

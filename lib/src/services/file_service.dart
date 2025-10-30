@@ -1,5 +1,4 @@
 import 'dart:io';
-import '../utils/logger.dart';
 
 class FileService {
   Future<void> changeToDirectory(String endsWith) async {

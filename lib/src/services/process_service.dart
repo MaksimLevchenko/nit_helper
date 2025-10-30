@@ -50,11 +50,14 @@ class ProcessService {
     final solutions = <String, String>{
       'fluttergen': 'dart pub global activate flutter_gen',
       'serverpod': 'dart pub global activate serverpod_cli',
-      'fvm': 'curl -fsSL https://fvm.app/install.sh | bash',
+      'fvm':
+          'Add FVM to your system by following instructions at https://fvm.app/documentation/getting-started/installation',
       'dart': 'Install Dart SDK from https://dart.dev/get-dart',
       'flutter':
           'Install Flutter SDK from https://flutter.dev/docs/get-started/install',
       'build_runner': 'Add build_runner to dev_dependencies in pubspec.yaml',
+      'dart-unused-files': 'dart pub global activate dart_unused_files',
+      'dart-format': 'Install Dart SDK from https://dart.dev/get-dart',
     };
 
     if (solutions.containsKey(commandName)) {

@@ -9,7 +9,7 @@ void main() {
   }
 
   final version = versionMatch.group(1);
-  final file = File('lib/generated/version.g.dart');
+  final file = File('lib/src/generated/version.g.dart');
 
   file.createSync(recursive: true);
   file.writeAsStringSync('''

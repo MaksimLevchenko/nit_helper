@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0]
+
+### ✨ Added
+- **Get All Dependencies**: New `get-all` command that recursively finds all subprojects with `pubspec.yaml` and runs `dart pub get` in each
+- **Smart Folder Exclusion**: Automatically excludes standard Flutter folders (build, ios, android, web, windows, macos, linux) when scanning for subprojects
+---
+
 ## [1.4.0]
 
 ### ✨ Added

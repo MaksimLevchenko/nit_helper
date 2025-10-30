@@ -262,6 +262,9 @@ CommandRunner createCommandRunner() {
   );
 }
 
+/// Запускает CLI с переданными аргументами
+///
+/// Возвращает код завершения процесса
 Future<int> runCli(List<String> args) {
   return createCommandRunner().run(args);
 }

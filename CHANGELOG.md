@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.1]
+
+### 🐛 Changed
+- **Cleanup**: Removed unused exports from `lib/nit_helper.dart` to streamline the library interface
+
 ## [1.5.0]
 
 ### ✨ Added

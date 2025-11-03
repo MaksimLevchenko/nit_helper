@@ -1,9 +1,18 @@
 # Changelog
 
+## [1.5.4] 
+
+### 🐛 Fixed
+-  Enhance process command execution with shell support and environment inclusion
+
+---
+
 ## [1.5.3]
 
 ### 📚 Updated
 - **Documentation**: Update launch arguments and enhance command display in ProcessService
+
+---
 
 ## [1.5.2] 
 
@@ -17,12 +26,14 @@
 ### 🐛 Changed
 - **Cleanup**: Removed unused exports from `lib/nit_helper.dart` to streamline the library interface
 
+---
+
 ## [1.5.0]
 
 ### ✨ Added
 - **Get All Dependencies**: New `get-all` command that recursively finds all subprojects with `pubspec.yaml` and runs `dart pub get` in each
 - **Smart Folder Exclusion**: Automatically excludes standard Flutter folders (build, ios, android, web, windows, macos, linux) when scanning for subprojects
-- 
+  
 ---
 
 ## [1.4.0]

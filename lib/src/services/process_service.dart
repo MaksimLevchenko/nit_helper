@@ -31,8 +31,10 @@ class ProcessService {
       // Используем inheritStdio для прямого наследования TTY
       final process = await Process.start(
         cmd.first,
-        cmd.sublist(1),
+        cmd.length > 1 ? cmd.sublist(1) : <String>[],
+        runInShell: true,
         mode: ProcessStartMode.inheritStdio,
+        includeParentEnvironment: true,
       );
 
       final exitCode = await process.exitCode;

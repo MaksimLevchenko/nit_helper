@@ -9,7 +9,7 @@ Usage:
   nit-helper build-server [--fvm] [--force]    Build Serverpod server
   nit-helper build-full [--fvm] [--force]      Build both frontend and backend
   nit-helper check [options]                   Analyze project for unused files
-  nit-helper get-all [--path <dir>] [--fvm]   Run "dart pub get" in all subprojects
+  nit-helper get-all [options]                 Run "dart pub get" in all subprojects
 
 
 Global Options:
@@ -28,6 +28,8 @@ Check Command Options:
 Get-All Command Options:
   -p, --path <directory>           Path to start searching (default: current)
   --fvm                            Run pub get through "fvm exec"
+  -i, --interactive                Ask for confirmation before processing
+  -t, --[no-]tree                 Display enhanced tree view (default: on)
 
 
 Examples:
@@ -48,6 +50,8 @@ Examples:
   nit-helper get-all
   nit-helper get-all --path ./packages
   nit-helper get-all -p ./my_monorepo --fvm
+  nit-helper get-all --interactive --no-tree    # Simple list view with confirmation
+  nit-helper get-all -i -t                      # Tree view with confirmation
 
 
 Check Command Features:
@@ -61,11 +65,15 @@ Check Command Features:
 
 Get-All Command Features:
   • Recursively finds all subprojects with pubspec.yaml
-  • Beautiful tree-structured output with results
+  • 🎆 Beautiful tree-structured output with folder status indicators:
+    📁 Unprocessed folders    ✅ Successfully processed
+  • Interactive mode with confirmation prompts
   • Smart exclusion of Flutter build folders (build, ios, android, web, etc.)
+  • Real-time progress tracking with visual progress bars
   • Automatic symlink loop detection
   • Cross-platform support (Windows, macOS, Linux)
   • Perfect for monorepo structures
+  • Colored output for better readability
 
 
 Automatically Excluded Folders:

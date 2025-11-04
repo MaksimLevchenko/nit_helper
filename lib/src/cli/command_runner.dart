@@ -101,6 +101,18 @@ class CommandRunner {
         'fvm',
         help: 'Run commands through FVM',
         defaultsTo: false,
+      )
+      ..addFlag(
+        'interactive',
+        abbr: 'i',
+        help: 'Ask for confirmation before processing projects',
+        defaultsTo: false,
+      )
+      ..addFlag(
+        'tree',
+        abbr: 't',
+        help: 'Display results in enhanced tree view format',
+        defaultsTo: true,
       );
   }
 
@@ -128,7 +140,7 @@ class CommandRunner {
       List<String> excludePatterns = [];
       List<String> excludeFolders = [];
       bool showDetails = true;
-      bool interactive = false;
+      bool checkInteractive = false;
 
       if (commandName == 'check' && commandArgs != null) {
         checkPath = commandArgs['path'] as String?;
@@ -136,15 +148,20 @@ class CommandRunner {
             (commandArgs['exclude-pattern'] as List<String>?) ?? [];
         excludeFolders = (commandArgs['exclude-folder'] as List<String>?) ?? [];
         showDetails = commandArgs['details'] as bool? ?? true;
-        interactive = commandArgs['interactive'] as bool? ?? false;
+        checkInteractive = commandArgs['interactive'] as bool? ?? false;
       }
 
       // Параметры для команды get-all
       String? getAllPath;
       bool getAllUseFvm = false;
+      bool getAllInteractive = false;
+      bool getAllTreeView = true;
+      
       if (commandName == 'get-all' && commandArgs != null) {
         getAllPath = commandArgs['path'] as String?;
         getAllUseFvm = commandArgs['fvm'] as bool? ?? false;
+        getAllInteractive = commandArgs['interactive'] as bool? ?? false;
+        getAllTreeView = commandArgs['tree'] as bool? ?? true;
       }
 
       return ParsedCommand(
@@ -155,9 +172,11 @@ class CommandRunner {
         excludePatterns: excludePatterns,
         excludeFolders: excludeFolders,
         showDetails: showDetails,
-        interactive: interactive,
+        checkInteractive: checkInteractive,
         getAllPath: getAllPath,
         getAllUseFvm: getAllUseFvm,
+        getAllInteractive: getAllInteractive,
+        getAllTreeView: getAllTreeView,
       );
     } catch (e) {
       throw ArgumentError('Failed to parse arguments: $e');
@@ -189,7 +208,7 @@ class CommandRunner {
         );
 
         // Интерактивная очистка если включена
-        if (command.interactive) {
+        if (command.checkInteractive) {
           await _checkCommand.interactiveCleanup(result);
         }
         break;
@@ -197,6 +216,8 @@ class CommandRunner {
         return await _getAllCommand.execute(
           path: command.getAllPath,
           useFvm: command.getAllUseFvm,
+          interactive: command.getAllInteractive,
+          treeView: command.getAllTreeView,
         );
       case null:
       case '--help':
@@ -221,11 +242,13 @@ class ParsedCommand {
   final List<String> excludePatterns;
   final List<String> excludeFolders;
   final bool showDetails;
-  final bool interactive;
+  final bool checkInteractive;
 
   // Параметры для команды get-all
   final String? getAllPath;
   final bool getAllUseFvm;
+  final bool getAllInteractive;
+  final bool getAllTreeView;
 
   ParsedCommand({
     required this.name,
@@ -235,9 +258,11 @@ class ParsedCommand {
     this.excludePatterns = const [],
     this.excludeFolders = const [],
     this.showDetails = true,
-    this.interactive = false,
+    this.checkInteractive = false,
     this.getAllPath,
     this.getAllUseFvm = false,
+    this.getAllInteractive = false,
+    this.getAllTreeView = true,
   });
 }
 

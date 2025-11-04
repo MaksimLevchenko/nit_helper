@@ -1,5 +1,6 @@
 import 'dart:io';
 import '../services/process_service.dart';
+import '../utils/folder_tree_printer.dart';
 
 class GetAllCommand {
   final ProcessService _processService;
@@ -7,15 +8,18 @@ class GetAllCommand {
   GetAllCommand(this._processService);
 
   /// Рекурсивно выполняет dart pub get во всех подпапках с pubspec.yaml
-  Future<int> execute({String? path, bool useFvm = false}) async {
+  Future<int> execute({
+    String? path,
+    bool useFvm = false,
+    bool interactive = false,
+    bool treeView = true,
+  }) async {
     final startDir = Directory.current.path;
     final searchDir = path != null ? Directory(path).absolute.path : startDir;
 
     try {
-      print(
-          '\x1B[36m🔍 Searching for Dart/Flutter projects in: $searchDir\x1B[0m');
+      print('\x1B[36m🔍 Searching for Dart/Flutter projects in: $searchDir\x1B[0m');
 
-      // Находим все подпапки с pubspec.yaml (включая стартовую папку)
       final projects = await _findDartProjects(Directory(searchDir));
 
       if (projects.isEmpty) {
@@ -23,46 +27,93 @@ class GetAllCommand {
         return 0;
       }
 
-      print('\x1B[32m📁 Found ${projects.length} projects:\x1B[0m');
-      for (final project in projects) {
-        final relativePath = _getRelativePath(project, searchDir);
-        print('   - $relativePath');
+      // Показываем найденные проекты
+      if (treeView) {
+        // Предварительный просмотр структуры с индикаторами "не обработано"
+        final previewResults = <String, bool>{};
+        for (final project in projects) {
+          final relativePath = _getRelativePath(project, searchDir);
+          previewResults[relativePath] = false; // Еще не обработано
+        }
+        
+        FolderTreePrinter.printSectionHeader('FOUND PROJECTS', emoji: '📁');
+        FolderTreePrinter.printProjectTree(
+          searchDir,
+          previewResults,
+          showStatus: true,
+          colorOutput: true,
+        );
+      } else {
+        FolderTreePrinter.printFoundProjects(projects, searchDir);
       }
 
-      print('');
+      if (interactive) {
+        print('\n\x1B[33m❓ Continue with processing all projects? (y/N): \x1B[0m');
+        final response = stdin.readLineSync()?.toLowerCase() ?? 'n';
+        if (response != 'y' && response != 'yes') {
+          print('\x1B[33m⚠ Operation cancelled by user\x1B[0m');
+          return 0;
+        }
+      }
+
+      FolderTreePrinter.printSectionHeader('PROCESSING PROJECTS', emoji: '🚀');
 
       // Выполняем dart pub get в каждом проекте
       final projectResults = <String, bool>{};
+      int currentProject = 0;
 
       for (final projectPath in projects) {
-        final result =
-            await _runPubGetInProject(projectPath, searchDir, useFvm);
+        currentProject++;
         final relativePath = _getRelativePath(projectPath, searchDir);
-        projectResults[relativePath] = result == 0;
+        final projectName = projectPath.split(Platform.pathSeparator).last;
+
+        // Показываем прогресс
+        if (!treeView) {
+          FolderTreePrinter.printProgress(
+            projectName,
+            currentProject - 1,
+            projects.length,
+            false,
+          );
+        }
+
+        final result = await _runPubGetInProject(
+          projectPath,
+          searchDir,
+          useFvm,
+          showDetails: !treeView,
+        );
+
+        final success = result == 0;
+        projectResults[relativePath] = success;
+
+        if (treeView) {
+          final status = success ? '✅' : '❌';
+          final color = success ? '\x1B[32m' : '\x1B[31m';
+          print('$color$status [$currentProject/${projects.length}] $projectName\x1B[0m');
+        } else {
+          FolderTreePrinter.printProgress(
+            projectName,
+            currentProject,
+            projects.length,
+            success,
+          );
+        }
       }
 
-      // Вывод итогов с красивой структурой
-      print('');
-      print('=' * 50);
-      print('📊 GET ALL SUMMARY');
-      print('=' * 50);
-      print('');
-      _printProjectTree(searchDir, projectResults);
-      print('');
+      // Финальный вывод результатов
+      print('\n');
 
-      final successCount = projectResults.values.where((v) => v).length;
+      if (treeView) {
+        FolderTreePrinter.printSectionHeader('FINAL RESULTS', emoji: '📊');
+        FolderTreePrinter.printProjectTree(searchDir, projectResults);
+      }
+
+      FolderTreePrinter.printSummary(projectResults);
+
       final failCount = projectResults.values.where((v) => !v).length;
+      return failCount > 0 ? 1 : 0;
 
-      print('Total projects: ${projectResults.length}');
-      print('\x1B[32mSuccessful: $successCount\x1B[0m');
-
-      if (failCount > 0) {
-        print('\x1B[31mFailed: $failCount\x1B[0m');
-        return 1;
-      } else {
-        print('\x1B[32mAll projects processed successfully! 🎉\x1B[0m');
-        return 0;
-      }
     } catch (e) {
       print('\x1B[31m❌ Error during get-all execution: $e\x1B[0m');
       return 1;
@@ -125,98 +176,6 @@ class GetAllCommand {
     return projects;
   }
 
-  /// Выводит структуру проектов с результатами
-  void _printProjectTree(String basePath, Map<String, bool> results) {
-    if (results.isEmpty) return;
-
-    // Строим древовидную структуру
-    final tree = <String, dynamic>{};
-    final baseDirName = _getLastSegment(basePath);
-
-    for (final entry in results.entries) {
-      final relativePath = entry.key;
-      var current = tree;
-
-      // Если это корневой проект (пустой путь), используем имя базовой директории
-      if (relativePath.isEmpty) {
-        current[baseDirName] = {'__result': entry.value};
-        continue;
-      }
-
-      final parts = relativePath.split(Platform.pathSeparator);
-
-      for (int i = 0; i < parts.length; i++) {
-        final part = parts[i];
-
-        if (i == parts.length - 1) {
-          // Это конечный проект
-          current[part] = {'__result': entry.value};
-        } else {
-          // Это промежуточная папка
-          if (!current.containsKey(part)) {
-            current[part] = {};
-          }
-          current = current[part] as Map<String, dynamic>;
-        }
-      }
-    }
-
-    _printTreeNode(tree, '', true);
-  }
-
-  /// Получает последний сегмент пути
-  String _getLastSegment(String path) {
-    final segments =
-        path.split(Platform.pathSeparator).where((s) => s.isNotEmpty).toList();
-    return segments.isNotEmpty ? segments.last : 'root';
-  }
-
-  /// Рекурсивно выводит узлы дерева
-  void _printTreeNode(
-    Map<String, dynamic> node,
-    String prefix,
-    bool isRoot,
-  ) {
-    final entries = node.entries.toList();
-
-    for (int i = 0; i < entries.length; i++) {
-      final entry = entries[i];
-      final key = entry.key;
-      final value = entry.value;
-      final isLast = i == entries.length - 1;
-
-      final connector = isRoot ? '' : (isLast ? '└── ' : '├── ');
-      final nextPrefix = prefix + (isRoot ? '' : (isLast ? '    ' : '│   '));
-
-      if (value is Map && value.containsKey('__result')) {
-        // Это проект
-        final success = value['__result'] as bool;
-        final icon = success ? '✅' : '❌';
-
-        // Если это корневой узел и есть другие проекты, показываем его как папку
-        if (isRoot && entries.length > 1) {
-          print('$prefix$icon $key/');
-
-          // Рекурсивно выводим остальные узлы
-          final remainingNodes = <String, dynamic>{};
-          for (int j = 0; j < entries.length; j++) {
-            if (j != i) {
-              remainingNodes[entries[j].key] = entries[j].value;
-            }
-          }
-          _printTreeNode(remainingNodes, nextPrefix, false);
-          break;
-        } else {
-          print('$prefix$connector$icon $key');
-        }
-      } else {
-        // Это папка с подпапками
-        print('$prefix$connector📦 $key/');
-        _printTreeNode(value as Map<String, dynamic>, nextPrefix, false);
-      }
-    }
-  }
-
   /// Возвращает список папок для исключения из поиска
   List<String> _getExcludedFolders() {
     return [
@@ -228,8 +187,6 @@ class GetAllCommand {
       'linux',
       'macos',
       'windows',
-      'bin',
-      'lib',
       // Системные папки
       '.dart_tool',
       '.git',
@@ -239,9 +196,15 @@ class GetAllCommand {
       '.fvm',
       'node_modules',
       // Кэш и временные файлы
-      '.pub-cache', '.gradle', '.m2', 'DerivedData', 'Pods',
+      '.pub-cache',
+      '.gradle',
+      '.m2',
+      'DerivedData',
+      'Pods',
       // Документация
-      'doc', 'docs', 'documentation',
+      'doc',
+      'docs',
+      'documentation',
     ];
   }
 
@@ -249,40 +212,42 @@ class GetAllCommand {
   Future<int> _runPubGetInProject(
     String projectPath,
     String basePath,
-    bool useFvm,
-  ) async {
+    bool useFvm, {
+    bool showDetails = true,
+  }) async {
     final projectName = projectPath.split(Platform.pathSeparator).last;
     final relativePath = _getRelativePath(projectPath, basePath);
 
-    print('');
-    print('\x1B[34m🔄 Processing: $projectName\x1B[0m');
-    print('\x1B[90m  Path: $relativePath\x1B[0m');
+    if (showDetails) {
+      print('');
+      print('\x1B[34m🔄 Processing: $projectName\x1B[0m');
+      print('\x1B[90m  Path: ${relativePath.isEmpty ? '.' : relativePath}\x1B[0m');
+    }
 
     try {
-      // Сохраняем текущую директорию
       final currentDir = Directory.current.path;
-
-      // Переходим в папку проекта
       Directory.current = projectPath;
 
-      // Выполняем dart pub get
       final result = await _processService.runCommand(
         ['dart', 'pub', 'get'],
         useFvm: useFvm,
       );
 
-      // Возвращаемся обратно
       Directory.current = currentDir;
 
-      if (result == 0) {
-        print('\x1B[32m  ✅ Success: $projectName\x1B[0m');
-      } else {
-        print('\x1B[31m  ❌ Failed: $projectName\x1B[0m');
+      if (showDetails) {
+        if (result == 0) {
+          print('\x1B[32m  ✅ Success: $projectName\x1B[0m');
+        } else {
+          print('\x1B[31m  ❌ Failed: $projectName\x1B[0m');
+        }
       }
 
       return result;
     } catch (e) {
-      print('\x1B[31m  ❌ Error in $projectName: $e\x1B[0m');
+      if (showDetails) {
+        print('\x1B[31m  ❌ Error in $projectName: $e\x1B[0m');
+      }
       return 1;
     }
   }

@@ -156,7 +156,7 @@ class CommandRunner {
       bool getAllUseFvm = false;
       bool getAllInteractive = false;
       bool getAllTreeView = true;
-      
+
       if (commandName == 'get-all' && commandArgs != null) {
         getAllPath = commandArgs['path'] as String?;
         getAllUseFvm = commandArgs['fvm'] as bool? ?? false;

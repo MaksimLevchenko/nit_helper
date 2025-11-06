@@ -15,10 +15,12 @@ class GetAllCommand {
     bool treeView = true,
   }) async {
     final startDir = Directory.current.path;
-    final searchDir = path != null ? Directory(path).absolute.path : startDir;
+    final searchDir =
+        path != null && path != '.' ? Directory(path).absolute.path : startDir;
 
     try {
-      print('\x1B[36m🔍 Searching for Dart/Flutter projects in: $searchDir\x1B[0m');
+      print(
+          '\x1B[36m🔍 Searching for Dart/Flutter projects in: $searchDir\x1B[0m');
 
       final projects = await _findDartProjects(Directory(searchDir));
 
@@ -32,11 +34,12 @@ class GetAllCommand {
         // Предварительный просмотр структуры с индикаторами "не обработано"
         final previewResults = <String, bool>{};
         for (final project in projects) {
-          final relativePath = _getRelativePath(project, searchDir);
+          var relativePath = _getRelativePath(project, searchDir);
           previewResults[relativePath] = false; // Еще не обработано
         }
-        
+
         FolderTreePrinter.printSectionHeader('FOUND PROJECTS', emoji: '📁');
+        print('previewResults: $previewResults\n');
         FolderTreePrinter.printProjectTree(
           searchDir,
           previewResults,
@@ -48,7 +51,8 @@ class GetAllCommand {
       }
 
       if (interactive) {
-        print('\n\x1B[33m❓ Continue with processing all projects? (y/N): \x1B[0m');
+        print(
+            '\n\x1B[33m❓ Continue with processing all projects? (y/N): \x1B[0m');
         final response = stdin.readLineSync()?.toLowerCase() ?? 'n';
         if (response != 'y' && response != 'yes') {
           print('\x1B[33m⚠ Operation cancelled by user\x1B[0m');
@@ -90,7 +94,8 @@ class GetAllCommand {
         if (treeView) {
           final status = success ? '✅' : '❌';
           final color = success ? '\x1B[32m' : '\x1B[31m';
-          print('$color$status [$currentProject/${projects.length}] $projectName\x1B[0m');
+          print(
+              '$color$status [$currentProject/${projects.length}] $projectName\x1B[0m');
         } else {
           FolderTreePrinter.printProgress(
             projectName,
@@ -113,9 +118,10 @@ class GetAllCommand {
 
       final failCount = projectResults.values.where((v) => !v).length;
       return failCount > 0 ? 1 : 0;
+    } catch (e, st) {
+      print(
+          '\x1B[31m❌ Error during get-all execution: $e stacktrace: ${st}\x1B[0m');
 
-    } catch (e) {
-      print('\x1B[31m❌ Error during get-all execution: $e\x1B[0m');
       return 1;
     } finally {
       Directory.current = startDir;
@@ -221,7 +227,8 @@ class GetAllCommand {
     if (showDetails) {
       print('');
       print('\x1B[34m🔄 Processing: $projectName\x1B[0m');
-      print('\x1B[90m  Path: ${relativePath.isEmpty ? '.' : relativePath}\x1B[0m');
+      print(
+          '\x1B[90m  Path: ${relativePath.isEmpty ? '.' : relativePath}\x1B[0m');
     }
 
     try {
@@ -254,15 +261,18 @@ class GetAllCommand {
 
   /// Получает относительный путь от базовой директории
   String _getRelativePath(String fullPath, String basePath) {
+    final mainDirName = basePath.split(Platform.pathSeparator).last;
+
     if (fullPath == basePath) {
-      return ''; // Корневой проект
+      return mainDirName; // Показываем имя корневой директории
     }
 
     if (fullPath.startsWith(basePath)) {
-      return fullPath.substring(basePath.length).replaceFirst(
-            RegExp('^[${RegExp.escape(Platform.pathSeparator)}]+'),
-            '',
-          );
+      final remainder = fullPath.substring(basePath.length).replaceFirst(
+          RegExp('^[${RegExp.escape(Platform.pathSeparator)}]+'), '');
+      return remainder.isEmpty
+          ? mainDirName
+          : '$mainDirName${Platform.pathSeparator}$remainder';
     }
     return fullPath;
   }

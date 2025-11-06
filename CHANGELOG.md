@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.5]
+
+### 🐛 Changed
+
+- Suppressed verbose output from `dart pub get` (no more “Resolving dependencies...” or “Downloading packages...” when successful).
+- Ensured process output is still displayed when `pub get` fails for better debugging visibility.
+
+### 🔧 Fixed
+
+- Resolved issue with folder tree printer summary display to ensure accurate project processing results.
+
+---
+
 ## [1.5.4] 
 
 ### 🐛 Fixed

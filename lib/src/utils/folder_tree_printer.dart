@@ -34,7 +34,7 @@ class FolderTreePrinter {
     final baseDirName = _getLastSegment(basePath);
 
     for (final entry in results.entries) {
-      final relativePath = (entry.key ?? '').toString();
+      final relativePath = (entry.key).toString();
       final rawValue = entry.value;
 
       // получаем булево значение безопасно
@@ -125,7 +125,7 @@ class FolderTreePrinter {
   static Map<String, dynamic> _ensureMapStringDynamic(Map existing) {
     try {
       // Попытка безопасного копирования через Map.from
-      final copy = Map<String, dynamic>.from(existing as Map);
+      final copy = Map<String, dynamic>.from(existing);
       return copy;
     } catch (_) {
       final result = <String, dynamic>{};
@@ -229,8 +229,9 @@ class FolderTreePrinter {
     final percentage = total > 0 ? (successful * 100 / total).round() : 0;
     print('Success rate: $percentage%');
 
-    if (failed == 0)
+    if (failed == 0) {
       print('\x1B[32m🎉 All projects processed successfully!\x1B[0m');
+    }
   }
 
   static void printProgress(

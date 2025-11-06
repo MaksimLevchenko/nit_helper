@@ -39,7 +39,6 @@ class GetAllCommand {
         }
 
         FolderTreePrinter.printSectionHeader('FOUND PROJECTS', emoji: '📁');
-        print('previewResults: $previewResults\n');
         FolderTreePrinter.printProjectTree(
           searchDir,
           previewResults,
@@ -118,9 +117,8 @@ class GetAllCommand {
 
       final failCount = projectResults.values.where((v) => !v).length;
       return failCount > 0 ? 1 : 0;
-    } catch (e, st) {
-      print(
-          '\x1B[31m❌ Error during get-all execution: $e stacktrace: ${st}\x1B[0m');
+    } catch (e) {
+      print('\x1B[31m❌ Error during get-all execution: $e\x1B[0m');
 
       return 1;
     } finally {
@@ -238,6 +236,7 @@ class GetAllCommand {
       final result = await _processService.runCommand(
         ['dart', 'pub', 'get'],
         useFvm: useFvm,
+        showDetails: false,
       );
 
       Directory.current = currentDir;

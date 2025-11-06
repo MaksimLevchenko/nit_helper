@@ -1,19 +1,22 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 class ProcessService {
   Future<int> runCommand(
     List<String> cmd, {
     required bool useFvm,
+    bool showDetails = true, // <- new param
   }) async {
     if (useFvm) {
       cmd = ['fvm', 'exec', ...cmd];
     }
 
-    final directory = Directory.current.path.split('/').last;
+    final directory = Directory.current.path.split(Platform.pathSeparator).last;
 
     final commandDisplay = () {
       var displayCmd = cmd;
-      // Remove 'dart run' prefix if present
+      // Remove 'dart pub global run' prefix if present (old behaviour preserved)
       if (displayCmd.length >= 5 &&
           displayCmd[0] == 'dart' &&
           displayCmd[1] == 'pub' &&
@@ -24,35 +27,83 @@ class ProcessService {
       return displayCmd.join(' ');
     }();
 
-    // Фиолетовая строка перед командой
+    // Фиолетовая строка перед командой (оставляем — полезно)
     print('\x1B[35mRunning $commandDisplay in $directory\x1B[0m');
 
     try {
-      // Используем inheritStdio для прямого наследования TTY
-      final process = await Process.start(
-        cmd.first,
-        cmd.length > 1 ? cmd.sublist(1) : <String>[],
-        runInShell: true,
-        mode: ProcessStartMode.inheritStdio,
-        includeParentEnvironment: true,
-      );
+      if (showDetails) {
+        // Прямой вывод в терминал — для подробного режима
+        final process = await Process.start(
+          cmd.first,
+          cmd.length > 1 ? cmd.sublist(1) : <String>[],
+          runInShell: true,
+          mode: ProcessStartMode.inheritStdio,
+          includeParentEnvironment: true,
+        );
 
-      final exitCode = await process.exitCode;
+        final exitCode = await process.exitCode;
+        return exitCode;
+      } else {
+        // Подавленный (по умолчанию для pub get при showDetails=false)
+        // Собираем stdout/stderr в память и печатаем только при ошибке.
+        final process = await Process.start(
+          cmd.first,
+          cmd.length > 1 ? cmd.sublist(1) : <String>[],
+          runInShell: true,
+          mode: ProcessStartMode.normal,
+          includeParentEnvironment: true,
+        );
 
-      if (exitCode != 0) {
-        // Для ненулевых кодов возврата просто возвращаем код, не бросаем исключение
+        final outBuffer = StringBuffer();
+        final errBuffer = StringBuffer();
+
+        // слушаем stdout
+        final stdoutSub = process.stdout
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .listen((line) {
+          outBuffer.writeln(line);
+        });
+
+        // слушаем stderr
+        final stderrSub = process.stderr
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .listen((line) {
+          errBuffer.writeln(line);
+        });
+
+        final exitCode = await process.exitCode;
+
+        // дождёмся закрытия стримов
+        await stdoutSub.cancel();
+        await stderrSub.cancel();
+
+        if (exitCode != 0) {
+          // при ошибке печатаем и stdout и stderr — чтобы дать контекст
+          final outText = outBuffer.toString().trim();
+          final errText = errBuffer.toString().trim();
+
+          if (outText.isNotEmpty) {
+            print('\x1B[90m--- OUTPUT ---\x1B[0m');
+            print(outText);
+          }
+          if (errText.isNotEmpty) {
+            print('\x1B[31m--- ERROR ---\x1B[0m');
+            print(errText);
+          }
+        }
+
         return exitCode;
       }
-
-      return exitCode;
     } on ProcessException catch (e) {
       // Обрабатываем ошибку "файл не найден"
-      if (e.toString().contains('Не удается найти указанный файл') ||
-          e.toString().contains('No such file or directory')) {
+      final msg = e.toString();
+      if (msg.contains('Не удается найти указанный файл') ||
+          msg.contains('No such file or directory')) {
         await _handleMissingCommand(cmd, useFvm);
-        return 127; // Стандартный код для "command not found"
+        return 127; // "command not found"
       }
-      // Для других ProcessException просто возвращаем код ошибки
       return e.errorCode;
     }
   }
@@ -61,7 +112,6 @@ class ProcessService {
     final commandName = cmd.first;
     print('\n\x1B[31mError: Command "$commandName" not found\x1B[0m');
 
-    // Предлагаем решения для различных команд
     final solutions = <String, String>{
       'fluttergen': 'dart pub global activate flutter_gen',
       'serverpod': 'dart pub global activate serverpod_cli',
@@ -82,7 +132,6 @@ class ProcessService {
           '\x1B[33mSolution: Please install $commandName and ensure it\'s in your PATH\x1B[0m');
     }
 
-    // Дополнительная информация для FVM
     if (useFvm && commandName == 'fvm') {
       print('\n\x1B[36mNote: FVM is required when using --fvm flag\x1B[0m');
       print('\x1B[36mInstall with: dart pub global activate fvm\x1B[0m');

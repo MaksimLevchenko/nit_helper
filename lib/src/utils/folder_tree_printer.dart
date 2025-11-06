@@ -223,14 +223,6 @@ class FolderTreePrinter {
     final successful = results.values.where((v) => v == true).length;
     final failed = total - successful;
 
-    print('');
-    print('=' * 50);
-    print('📊 PROCESSING SUMMARY');
-    print('=' * 50);
-    print('');
-    print('Total projects: $total');
-    print('\x1B[32m✅ Successful: $successful\x1B[0m');
-
     if (failed > 0) print('\x1B[31m❌ Failed: $failed\x1B[0m');
 
     print('');
